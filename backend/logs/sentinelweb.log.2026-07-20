@@ -1,0 +1,5 @@
+2026-07-20 22:48:07 | DEBUG | __main__ | <module> | Line 5 | Debug Log
+2026-07-20 22:48:07 | INFO | __main__ | <module> | Line 7 | Information Log
+2026-07-20 22:48:07 | WARNING | __main__ | <module> | Line 9 | Warning Log
+2026-07-20 22:48:07 | ERROR | __main__ | <module> | Line 11 | Error Log
+2026-07-20 22:48:07 | CRITICAL | __main__ | <module> | Line 13 | Critical Log
