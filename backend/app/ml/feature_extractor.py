@@ -57,12 +57,13 @@ class FeatureExtractor:
             lexical_features = self._lexical_extractor.extract(url)
             domain_features = self._domain_extractor.extract(url)
             security_features = self._security_extractor.extract(url)
-            # url_features = self._url_extractor.extract(url)
+            #url_features = self._url_extractor.extract(url)
 
             feature_sets = [
-                    lexical_features,
-                    domain_features,
-                    security_features,
+                lexical_features,
+                domain_features,
+                security_features,
+                url_features,
             ]
 
             self._validate_duplicates(feature_sets)

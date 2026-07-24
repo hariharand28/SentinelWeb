@@ -322,5 +322,5 @@ class Preprocessor:
             if column in df.columns
         ]
         feature_df = df.drop(columns=columns_to_drop, errors="ignore")
-        feature_df = feature_df.select_dtypes(include=[np.number])
+        feature_df = feature_df.astype(float)
         return feature_df

@@ -122,8 +122,8 @@ class DatasetLoader:
 
         clean = clean[clean["url"] != ""]
 
-        clean["label"] = clean["type"].map(LABEL_MAPPING)
-
+        clean["label"] = clean["type"]
+        
         clean = clean.dropna(subset=["label"])
 
         before = len(clean)

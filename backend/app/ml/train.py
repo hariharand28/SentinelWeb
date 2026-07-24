@@ -146,6 +146,7 @@ class Trainer:
             logger.info("Encoding labels and scaling features...")
             encoded_labels = self.preprocessor.encode_labels(labels)
             scaled_features = self.preprocessor.fit_transform(features_df)
+            print("Training features:", features_df.columns.tolist())
             logger.info("Preprocessing completed successfully.")
             return scaled_features, encoded_labels
         except Exception as exc:
@@ -321,6 +322,8 @@ class Trainer:
         labels = dataset[constants.LABEL_COLUMN]
 
         features_df = self._extract_features(urls)
+        print(features_df.columns.tolist())
+        print(features_df.shape)
         scaled_features, encoded_labels = self._preprocess(features_df, labels)
         x_train, x_test, y_train, y_test = self._split_data(
             scaled_features, encoded_labels

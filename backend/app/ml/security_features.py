@@ -79,7 +79,7 @@ class SecurityFeatureExtractor:
 
         except FeatureExtractionError:
             raise
-        except Exception  as exc:
+        except Exception as exc:
             logger.exception(
                 "Failed to extract security features for URL: %s", url
             )

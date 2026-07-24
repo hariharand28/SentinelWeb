@@ -188,8 +188,7 @@ class URLFeatureExtractor:
 
         return {
             "directory_count": max(directory_count, 0),
-            "file_extension": file_extension,
-            "has_file_extension": bool(file_extension),
+            "file_extension": file_extension,            "has_file_extension": bool(file_extension),
             "filename_length": len(filename),
         }
 

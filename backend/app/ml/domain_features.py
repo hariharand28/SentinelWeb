@@ -68,7 +68,8 @@ class DomainFeatureExtractor:
             features: dict[str, int | float | bool | str] = {
                 "domain_length": len(registered_domain),
                 "subdomain_count": len(subdomain_parts),
-                "tld": tld,
+                "tld_length": len(tld),
+                # "is_com": int(tld.lower() == "com"),
                 "is_ip": is_ip,
                 "is_shortener": self._is_shortener(registered_domain),
                 "is_safe_tld": self._is_safe_tld(tld),
@@ -194,20 +195,15 @@ class DomainFeatureExtractor:
         return tld.lower() in constants.RISKY_TLDS
 
     def _contains_brand_name(self, domain: str, subdomain: str) -> bool:
-        """Determine whether a known brand name appears in the domain.
+        subdomain = subdomain.lower()
 
-        Args:
-            domain: The registrable domain label (excluding TLD).
-            subdomain: The subdomain portion of the extracted URL.
+        for brand in constants.BRAND_NAMES:
+            brand = brand.lower()
 
-        Returns:
-            True if any configured brand name is found within the domain
-            or subdomain labels, False otherwise.
-        """
-        haystack = f"{subdomain}.{domain}".lower()
-        return any(
-            brand.lower() in haystack for brand in constants.BRAND_NAMES
-        )
+            if brand in subdomain and brand != domain.lower():
+                return True
+
+        return False    
 
     def _is_punycode(self, hostname: str) -> bool:
         """Determine whether the hostname contains punycode-encoded labels.
