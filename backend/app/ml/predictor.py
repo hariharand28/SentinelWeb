@@ -42,6 +42,7 @@ class Predictor:
         """
         self.feature_extractor: FeatureExtractor = FeatureExtractor()
         self.preprocessor: Preprocessor = Preprocessor()
+        self.feature_columns: list[str] = []
 
         try:
             if not constants.MODEL_PATH.exists():
@@ -56,6 +57,7 @@ class Predictor:
             self.model = joblib.load(constants.MODEL_PATH)
 
             self.preprocessor.load()
+            self.feature_columns = self.preprocessor.feature_columns
             logger.info("Predictor artifacts loaded successfully")
         except Exception as exc:
             logger.exception("Failed to load trained model artifacts")
@@ -93,7 +95,9 @@ class Predictor:
             scaled_features = self.preprocessor.transform(feature_dataframe)
             prediction = self.model.predict(scaled_features)
             probabilities = self.model.predict_proba(scaled_features)
-            decoded_label = self.preprocessor.decode_labels(prediction)[0]
+            decoded_label = str(
+                self.preprocessor.decode_labels(prediction)[0]
+            )            
             confidence = round(
                 float(probabilities[0].max()),
                 4,

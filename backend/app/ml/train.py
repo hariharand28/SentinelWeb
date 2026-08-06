@@ -11,11 +11,19 @@ from __future__ import annotations
 import joblib
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
+from urllib.parse import urlsplit, urlunsplit
 
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
+from sklearn.metrics import (
+    accuracy_score,
+    confusion_matrix,
+    f1_score,
+    precision_recall_fscore_support,
+    precision_score,
+    recall_score,
+)
 from sklearn.model_selection import train_test_split
 
 from app.config import constants
@@ -69,11 +77,13 @@ class Trainer:
         self.preprocessor = Preprocessor()
         self.random_state = random_state
         self.test_size = test_size
+        self.feature_columns: list[str] = []
         self.model: RandomForestClassifier = RandomForestClassifier(
             n_estimators=n_estimators,
             random_state=self.random_state,
             n_jobs=-1,
         )
+
     def _load_dataset(self) -> pd.DataFrame:
         """Load the local CSV dataset."""
 
@@ -93,6 +103,76 @@ class Trainer:
             raise TrainingError(
                 f"Dataset loading failed: {exc}"
             ) from exc
+
+    def _split_raw_data(
+        self, dataset: pd.DataFrame
+    ) -> Tuple[pd.DataFrame, pd.DataFrame]:
+        """Split raw dataset rows before feature extraction to avoid leakage."""
+        try:
+            train_df, test_df = train_test_split(
+                dataset,
+                test_size=self.test_size,
+                random_state=self.random_state,
+                stratify=dataset[constants.LABEL_COLUMN],
+            )
+            return train_df.reset_index(drop=True), test_df.reset_index(drop=True)
+        except Exception as exc:
+            logger.exception("Raw dataset splitting failed.")
+            raise TrainingError(f"Raw dataset splitting failed: {exc}") from exc
+
+    def _augment_legitimate_homepages(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Augment legitimate rows with apex equivalents of common www URLs."""
+        augmented_rows: list[pd.Series] = []
+
+        for _, row in df.iterrows():
+            url = str(row[constants.URL_COLUMN])
+            label = str(row[constants.LABEL_COLUMN]).strip().lower()
+
+            if label != "legitimate":
+                continue
+
+            split_url = urlsplit(url if "://" in url else f"https://{url}")
+            hostname = split_url.hostname or ""
+            if not hostname.startswith("www."):
+                continue
+
+            stripped_hostname = hostname.removeprefix("www.")
+            if not stripped_hostname:
+                continue
+
+            netloc = stripped_hostname
+            if split_url.port:
+                netloc = f"{netloc}:{split_url.port}"
+            if split_url.username:
+                credentials = split_url.username
+                if split_url.password:
+                    credentials = f"{credentials}:{split_url.password}"
+                netloc = f"{credentials}@{netloc}"
+
+            stripped_url = urlunsplit(
+                (
+                    split_url.scheme or "https",
+                    netloc,
+                    split_url.path,
+                    split_url.query,
+                    split_url.fragment,
+                )
+            )
+
+            synthetic_row = row.copy()
+            synthetic_row[constants.URL_COLUMN] = stripped_url
+            augmented_rows.append(synthetic_row)
+
+        if not augmented_rows:
+            return df.reset_index(drop=True)
+
+        augmented_df = pd.concat([df, pd.DataFrame(augmented_rows)], ignore_index=True)
+        augmented_df = augmented_df.drop_duplicates(subset=[constants.URL_COLUMN, constants.LABEL_COLUMN])
+        logger.info(
+            "Augmented legitimate training rows with %d apex homepage variants.",
+            len(augmented_rows),
+        )
+        return augmented_df.reset_index(drop=True)
         
 
     def _extract_features(
@@ -146,7 +226,11 @@ class Trainer:
             logger.info("Encoding labels and scaling features...")
             encoded_labels = self.preprocessor.encode_labels(labels)
             scaled_features = self.preprocessor.fit_transform(features_df)
-            print("Training features:", features_df.columns.tolist())
+            self.feature_columns = self.preprocessor.feature_columns
+            logger.info(
+                "Training feature count: %d",
+                len(self.feature_columns),
+            )
             logger.info("Preprocessing completed successfully.")
             return scaled_features, encoded_labels
         except Exception as exc:
@@ -154,42 +238,15 @@ class Trainer:
             raise TrainingError(f"Preprocessing failed: {exc}") from exc
 
     def _split_data(
-        self, features: np.ndarray, labels: np.ndarray
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-        """Splits data into training and testing sets.
-
-        Args:
-            features (np.ndarray): Scaled feature matrix.
-            labels (np.ndarray): Encoded labels.
-
-        Returns:
-            Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-                X_train, X_test, y_train, y_test.
-
-        Raises:
-            TrainingError: If splitting the dataset fails.
-        """
-        try:
-            logger.info(
-                "Splitting dataset into train/test sets with test_size=%s...",
-                self.test_size,
-            )
-            x_train, x_test, y_train, y_test = train_test_split(
-                features,
-                labels,
-                test_size=self.test_size,
-                random_state=self.random_state,
-                stratify=labels,
-            )
-            logger.info(
-                "Split completed. Train size: %d, Test size: %d",
-                len(x_train),
-                len(x_test),
-            )
-            return x_train, x_test, y_train, y_test
-        except Exception as exc:
-            logger.exception("Dataset splitting failed.")
-            raise TrainingError(f"Dataset splitting failed: {exc}") from exc
+        self, train_df: pd.DataFrame, test_df: pd.DataFrame
+    ) -> Tuple[pd.DataFrame, pd.DataFrame]:
+        """Validate and return raw train/test data frames."""
+        logger.info(
+            "Split completed. Train size: %d, Test size: %d",
+            len(train_df),
+            len(test_df),
+        )
+        return train_df, test_df
 
     def _fit_model(self, x_train: np.ndarray, y_train: np.ndarray) -> None:
         """Fits the RandomForestClassifier on the training data.
@@ -228,6 +285,8 @@ class Trainer:
         try:
             logger.info("Evaluating model on test set...")
             predictions = self.model.predict(x_test)
+            confusion = confusion_matrix(y_test, predictions)
+            logger.info("Confusion matrix:\n%s", confusion)
 
             metrics: Dict[str, float] = {
                 "accuracy": accuracy_score(y_test, predictions),
@@ -318,16 +377,25 @@ class Trainer:
                 f"Missing expected label column: {constants.LABEL_COLUMN}"
             )
 
-        urls = dataset[constants.URL_COLUMN].tolist()
-        labels = dataset[constants.LABEL_COLUMN]
+        train_df, test_df = self._split_raw_data(dataset)
+        train_df = self._augment_legitimate_homepages(train_df)
+        train_df, test_df = self._split_data(train_df, test_df)
 
-        features_df = self._extract_features(urls)
-        print(features_df.columns.tolist())
-        print(features_df.shape)
-        scaled_features, encoded_labels = self._preprocess(features_df, labels)
-        x_train, x_test, y_train, y_test = self._split_data(
-            scaled_features, encoded_labels
-        )
+        train_urls = train_df[constants.URL_COLUMN].tolist()
+        train_labels = train_df[constants.LABEL_COLUMN]
+        test_urls = test_df[constants.URL_COLUMN].tolist()
+        test_labels = test_df[constants.LABEL_COLUMN]
+
+        train_features_df = self._extract_features(train_urls)
+        test_features_df = self._extract_features(test_urls)
+
+        encoded_train_labels = self.preprocessor.fit_labels(train_labels)
+        encoded_test_labels = self.preprocessor.transform_labels(test_labels)
+
+        x_train = self.preprocessor.fit_transform(train_features_df)
+        x_test = self.preprocessor.transform(test_features_df)
+        y_train = encoded_train_labels
+        y_test = encoded_test_labels
 
         self._fit_model(x_train, y_train)
         metrics = self._evaluate_model(x_test, y_test)

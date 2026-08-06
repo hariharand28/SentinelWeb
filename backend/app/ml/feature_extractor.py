@@ -8,8 +8,6 @@ for use by SentinelWeb's AI-based phishing detection pipeline.
 
 from __future__ import annotations
 
-from collections import Counter
-
 from app.core.logger import get_logger
 from app.exceptions.ml_exceptions import FeatureExtractionError
 from app.ml.domain_features import DomainFeatureExtractor
@@ -57,7 +55,7 @@ class FeatureExtractor:
             lexical_features = self._lexical_extractor.extract(url)
             domain_features = self._domain_extractor.extract(url)
             security_features = self._security_extractor.extract(url)
-            #url_features = self._url_extractor.extract(url)
+            url_features = self._url_extractor.extract(url)
 
             feature_sets = [
                 lexical_features,
@@ -65,8 +63,6 @@ class FeatureExtractor:
                 security_features,
                 url_features,
             ]
-
-            self._validate_duplicates(feature_sets)
 
             merged_features = self._merge_features(feature_sets)
             sorted_features = dict(sorted(merged_features.items()))
@@ -102,34 +98,6 @@ class FeatureExtractor:
         if not isinstance(url, str) or not url.strip():
             raise FeatureExtractionError("URL must be a non-empty string.")
 
-    def _validate_duplicates(
-        self,
-        feature_sets: list[dict[str, int | float | bool | str]],
-    ) -> None:
-        """Ensure no feature name collisions exist across feature sets.
-
-        Args:
-            feature_sets: A list of feature dictionaries produced by the
-                individual extractors.
-
-        Raises:
-            FeatureExtractionError: If any feature name appears in more
-                than one feature dictionary.
-        """
-        key_counts: Counter[str] = Counter()
-        for feature_set in feature_sets:
-            key_counts.update(feature_set.keys())
-
-        duplicate_keys = [key for key, count in key_counts.items() if count > 1]
-
-        if duplicate_keys:
-            logger.error(
-                "Duplicate feature names detected: %s", duplicate_keys
-            )
-            raise FeatureExtractionError(
-                f"Duplicate feature names detected: {sorted(duplicate_keys)}"
-            )
-
     def _merge_features(
         self,
         feature_sets: list[dict[str, int | float | bool | str]],
@@ -146,5 +114,12 @@ class FeatureExtractor:
         """
         merged: dict[str, int | float | bool | str] = {}
         for feature_set in feature_sets:
-            merged.update(feature_set)
+            for key, value in feature_set.items():
+                if key in merged:
+                    logger.debug(
+                        "Skipping duplicate feature '%s' from later extractor.",
+                        key,
+                    )
+                    continue
+                merged[key] = value
         return merged

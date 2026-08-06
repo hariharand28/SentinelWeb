@@ -8,3 +8,4 @@ class PredictionRequest(BaseModel):
 class PredictionResponse(BaseModel):
     prediction: str
     confidence: float
+    explanation: str

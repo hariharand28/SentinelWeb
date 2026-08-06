@@ -50,11 +50,11 @@ class URLFeatureExtractor:
             parsed = urlparse(normalized_url)
             self._validate_parsed_url(parsed)
 
-            features: dict[str, int | float | bool | str] = {
-                **self._extract_general_features(parsed),
+            features = {
                 **self._extract_structure_features(normalized_url),
                 **self._extract_component_features(parsed),
                 **self._extract_statistical_features(normalized_url),
+                **self._extract_root_features(parsed),
             }
             features.update(
                 self._extract_ratio_features(normalized_url, features)
@@ -70,7 +70,7 @@ class URLFeatureExtractor:
             )
             raise FeatureExtractionError(
                 f"Failed to extract URL features from URL: {url!r}"
-            )
+            ) from exc
 
     def _validate_url(self, url: str) -> None:
         """Validate that the URL is a non-empty string.
@@ -112,27 +112,6 @@ class URLFeatureExtractor:
         if not parsed.netloc:
             raise FeatureExtractionError("URL could not be parsed.")
 
-    def _extract_general_features(
-        self, parsed: ParseResult
-    ) -> dict[str, int]:
-        """Compute general length-based features.
-
-        Args:
-            parsed: The parsed URL result.
-
-        Returns:
-            A dictionary of general length-based feature values.
-        """
-        url_length = len(parsed.geturl())
-        hostname_length = len(parsed.hostname) if parsed.hostname else 0
-
-        return {
-            "url_length": url_length,
-            "hostname_length": hostname_length,
-            "path_length": len(parsed.path),
-            "query_length": len(parsed.query),
-            "fragment_length": len(parsed.fragment),
-        }
 
     def _extract_structure_features(self, url: str) -> dict[str, int]:
         """Compute delimiter and structural character counts.
@@ -188,7 +167,8 @@ class URLFeatureExtractor:
 
         return {
             "directory_count": max(directory_count, 0),
-            "file_extension": file_extension,            "has_file_extension": bool(file_extension),
+            "file_extension_length": len(file_extension),
+            "has_file_extension": bool(file_extension),
             "filename_length": len(filename),
         }
 
@@ -245,4 +225,20 @@ class URLFeatureExtractor:
         return {
             "digit_ratio": digit_count / total_length,
             "special_character_ratio": special_character_count / total_length,
+        }
+
+    def _extract_root_features(
+        self, parsed: ParseResult
+    ) -> dict[str, bool]:
+        """Compute generic features for clean homepage-style URLs."""
+        is_root_path = parsed.path in {"", "/"}
+
+        return {
+            "is_root_path": is_root_path,
+            "is_clean_root_url": (
+                is_root_path
+                and not parsed.query
+                and not parsed.fragment
+                and parsed.scheme.lower() == "https"
+            ),
         }

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>SentinelWeb</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <main class="container">
+    <header class="header">
+      <div class="logo">🛡️</div>
+      <h1>SentinelWeb</h1>
+    </header>
+
+    <section class="card" id="statusCard">
+      <div class="field">
+        <span class="label">Website URL</span>
+        <span class="value" id="urlValue">Loading...</span>
+      </div>
+
+      <div class="field">
+        <span class="label">Prediction</span>
+        <span class="value badge" id="predictionValue">—</span>
+      </div>
+
+      <div class="field">
+        <span class="label">Confidence</span>
+        <span class="value" id="confidenceValue">—</span>
+      </div>
+
+      <div class="error" id="errorMessage" hidden></div>
+    </section>
+
+    <button id="refreshBtn" class="refresh-btn">
+      <span id="refreshIcon">↻</span> Refresh
+    </button>
+  </main>
+
+  <script src="popup.js"></script>
+</body>
+</html>

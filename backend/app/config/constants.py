@@ -30,6 +30,7 @@ OPTIONAL_COLUMNS: Final[frozenset[str]] = frozenset({
 })
 
 SUPPORTED_LABELS: Final[frozenset[str]] = frozenset({
+    "legitimate",
     "phishing",
     "benign",
 })
@@ -71,36 +72,6 @@ MAX_URL_LENGTH: Final[int] = 2048
 DEFAULT_TIMEOUT: Final[int] = 10
 
 # ==============================================================================
-# URL Keywords
-# ==============================================================================
-
-SUSPICIOUS_KEYWORDS: Final[tuple[str, ...]] = (
-    "login",
-    "signin",
-    "verify",
-    "secure",
-    "update",
-    "account",
-    "bank",
-    "wallet",
-    "payment",
-    "invoice",
-    "password",
-    "credential",
-    "confirm",
-    "authenticate",
-    "bonus",
-    "gift",
-    "reward",
-    "paypal",
-    "microsoft",
-    "google",
-    "apple",
-    "amazon",
-    "netflix",
-)
-
-# ==============================================================================
 # Domain Features
 # ==============================================================================
 
@@ -137,19 +108,6 @@ RISKY_TLDS: Final[frozenset[str]] = frozenset({
     "click",
 })
 
-BRAND_NAMES: Final[frozenset[str]] = frozenset({
-    "google",
-    "paypal",
-    "apple",
-    "amazon",
-    "microsoft",
-    "facebook",
-    "instagram",
-    "netflix",
-    "github",
-    "dropbox",
-    "bank",
-})
 
 # ==============================================================================
 # Ports
@@ -169,20 +127,6 @@ HTTPS_PORTS: Final[frozenset[int]] = frozenset({
     443,
     8443,
 })
-
-# ==============================================================================
-# Login Paths
-# ==============================================================================
-
-COMMON_LOGIN_PATHS: Final[tuple[str, ...]] = (
-    "/login",
-    "/signin",
-    "/account",
-    "/verify",
-    "/auth",
-    "/wp-login.php",
-    "/admin",
-)
 
 # ==============================================================================
 # Security Thresholds
@@ -224,6 +168,7 @@ SUSPICIOUS_QUERY_PARAM_NAMES: Final[frozenset[str]] = frozenset({
 MODEL_NAME: Final[str] = "random_forest.pkl"
 SCALER_NAME: Final[str] = "scaler.pkl"
 LABEL_ENCODER_NAME: Final[str] = "label_encoder.pkl"
+FEATURE_COLUMNS_NAME: Final[str] = "feature_columns.pkl"
 
 # ==============================================================================
 # Logging
@@ -261,15 +206,10 @@ NON_FEATURE_COLUMNS: Final[frozenset[str]] = frozenset({
     "type",
 })
 
-SCALER_PATH: Final[Path] = MODELS_DIR / SCALER_NAME
-
-LABEL_ENCODER_PATH: Final[Path] = (
-    MODELS_DIR / LABEL_ENCODER_NAME
-)
-
 MODEL_PATH = MODELS_DIR / MODEL_NAME
 SCALER_PATH = MODELS_DIR / SCALER_NAME
 LABEL_ENCODER_PATH = MODELS_DIR / LABEL_ENCODER_NAME
+FEATURE_COLUMNS_PATH = MODELS_DIR / FEATURE_COLUMNS_NAME
 
 URL_COLUMN: Final[str] = "url"
 LABEL_COLUMN: Final[str] = "label"

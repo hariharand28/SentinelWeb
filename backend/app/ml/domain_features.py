@@ -67,16 +67,15 @@ class DomainFeatureExtractor:
 
             features: dict[str, int | float | bool | str] = {
                 "domain_length": len(registered_domain),
+                "hostname_label_count": len(hostname.split(".")),
                 "subdomain_count": len(subdomain_parts),
                 "tld_length": len(tld),
                 # "is_com": int(tld.lower() == "com"),
                 "is_ip": is_ip,
                 "is_shortener": self._is_shortener(registered_domain),
-                "is_safe_tld": self._is_safe_tld(tld),
-                "is_risky_tld": self._is_risky_tld(tld),
-                "contains_brand_name": self._contains_brand_name(
-                    domain, subdomain
-                ),
+                "known_safe_tld": self._is_safe_tld(tld),
+                "known_risky_tld": self._is_risky_tld(tld),
+                
                 "punycode_domain": self._is_punycode(hostname),
                 "repeated_subdomain": self._has_repeated_subdomain(
                     subdomain_parts
@@ -194,16 +193,21 @@ class DomainFeatureExtractor:
         """
         return tld.lower() in constants.RISKY_TLDS
 
-    def _contains_brand_name(self, domain: str, subdomain: str) -> bool:
-        subdomain = subdomain.lower()
+    def _is_simple_hostname(
+        self,
+        hostname: str,
+        subdomain_parts: list[str],
+    ) -> bool:
+        """Detect a short, clean hostname shape without suspicious adornments."""
+        hostname_lower = hostname.lower()
+        if not hostname_lower or self._is_ip_address(hostname_lower):
+            return False
 
-        for brand in constants.BRAND_NAMES:
-            brand = brand.lower()
-
-            if brand in subdomain and brand != domain.lower():
-                return True
-
-        return False    
+        return (
+            len(subdomain_parts) == 0
+            and "-" not in hostname_lower
+            and not any(char.isdigit() for char in hostname_lower)
+        )
 
     def _is_punycode(self, hostname: str) -> bool:
         """Determine whether the hostname contains punycode-encoded labels.

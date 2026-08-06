@@ -200,16 +200,10 @@ class LexicalFeatureExtractor:
         """
         url_lower = url.lower()
         return {
-            "has_ip": self._has_ip_address(parsed.hostname),
             "has_at_symbol": "@" in url,
             "has_encoded_characters": bool(_ENCODED_CHAR_PATTERN.search(url)),
-            "has_https": parsed.scheme.lower() == "https",
             "has_port": self._has_port(parsed),
-                    
-            "contains_login": "login" in url_lower,
-            "contains_secure": "secure" in url_lower,
-            "contains_verify": "verify" in url_lower,
-            "contains_update": "update" in url_lower,
+
         }
 
     def _has_ip_address(self, hostname: str | None) -> bool:

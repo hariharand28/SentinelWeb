@@ -72,6 +72,7 @@ class SecurityFeatureExtractor:
                 **self._extract_query_features(parsed.query),
                 **self._extract_encoding_features(normalized_url),
                 **self._extract_url_indicators(normalized_url, hostname),
+                **self._extract_root_url_features(parsed),
                 "ssl_feature_available": False,
             }
 
@@ -179,7 +180,6 @@ class SecurityFeatureExtractor:
             A dictionary of hostname-based feature values.
         """
         return {
-            "hostname_is_ip": self._is_ip_address(hostname),
             "hostname_contains_dash": "-" in hostname,
             "hostname_contains_digit": any(
                 char.isdigit() for char in hostname
@@ -290,4 +290,20 @@ class SecurityFeatureExtractor:
             "long_url": url_length > constants.LONG_URL_LENGTH_THRESHOLD,
             "very_long_url": url_length
             > constants.VERY_LONG_URL_LENGTH_THRESHOLD,
+        }
+
+    def _extract_root_url_features(
+        self, parsed: ParseResult
+    ) -> dict[str, bool]:
+        """Compute generic homepage-style URL features."""
+        is_root_path = parsed.path in {"", "/"}
+
+        return {
+            "is_root_path": is_root_path,
+            "is_clean_root_url": (
+                is_root_path
+                and not parsed.query
+                and not parsed.fragment
+                and parsed.scheme.lower() == "https"
+            ),
         }

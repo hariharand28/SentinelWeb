@@ -3,22 +3,17 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
-from app.config import constants
+from urllib.parse import urlparse
 
 import pandas as pd
 from datasets import load_dataset
-from urllib.parse import urlparse
 
-from app.config.constants import (
-    LABEL_MAPPING,
-    REQUIRED_COLUMNS,
-    DEFAULT_RANDOM_STATE,
-)
+from app.config import constants
+from app.config.constants import DEFAULT_RANDOM_STATE, REQUIRED_COLUMNS
 from app.core.logger import get_logger
 from app.exceptions.ml_exceptions import (
     DatasetLoaderError,
     EmptyDatasetError,
-    InvalidURLError,
     SchemaValidationError,
 )
 
@@ -45,6 +40,28 @@ class DatasetLoader:
             return bool(parsed.netloc)
         except Exception:
             return False
+
+    @staticmethod
+    def _normalize_label(value: Any) -> str | None:
+        if pd.isna(value):
+            return None
+
+        normalized = str(value).strip().lower()
+        if not normalized:
+            return None
+
+        if normalized in {"legitimate", "benign", "0"}:
+            return "legitimate"
+        if normalized in {"phishing", "1"}:
+            return "phishing"
+
+        mapped = constants.LABEL_MAPPING.get(normalized)
+        if mapped == 0:
+            return "legitimate"
+        if mapped == 1:
+            return "phishing"
+
+        return None
     
 
     def load_csv(self, path: str | Path) -> pd.DataFrame:
@@ -80,11 +97,6 @@ class DatasetLoader:
             return ds.to_pandas().convert_dtypes(dtype_backend="pyarrow")
         except Exception as exc:
             raise DatasetLoaderError(str(exc)) from exc
-        
-    def load(self) -> pd.DataFrame:
-        """Load the local CSV dataset."""
-
-        return self.load_csv("datasets/URL dataset.csv")
 
     def sample_dataframe(
         self,
@@ -98,7 +110,7 @@ class DatasetLoader:
             n=sample_size,
             random_state=random_state,
         ).reset_index(drop=True)
-        
+
     def load(self) -> pd.DataFrame:
         return self.load_csv(constants.DATASET_PATH)
     
@@ -120,15 +132,33 @@ class DatasetLoader:
 
         clean["url"] = clean["url"].astype(str).str.strip()
 
+        clean["label"] = clean["type"].apply(self._normalize_label)
+
+        clean = clean.dropna(subset=["label"])
         clean = clean[clean["url"] != ""]
 
-        clean["label"] = clean["type"]
-        
-        clean = clean.dropna(subset=["label"])
-
         before = len(clean)
+
+        conflicts = (
+            clean.groupby("url")["label"]
+            .nunique()
+        )
+
+        conflicting_urls = conflicts[conflicts > 1].index
+
+        if len(conflicting_urls):
+            logger.warning(
+                "Removing %d URLs with conflicting labels.",
+                len(conflicting_urls),
+            )
+            clean = clean[~clean["url"].isin(conflicting_urls)]
+
         clean = clean.drop_duplicates(subset=["url"])
-        logger.info("Duplicates removed: %d", before - len(clean))
+
+        logger.info(
+            "Duplicates removed: %d",
+            before - len(clean),
+        )
 
         invalid = ~clean["url"].apply(self._validate_url)
 

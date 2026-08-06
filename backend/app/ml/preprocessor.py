@@ -36,6 +36,8 @@ class Preprocessor:
         self._scaler = StandardScaler()
         self._label_encoder = LabelEncoder()
         self._is_fitted = False
+        self._labels_fitted = False
+        self._feature_columns: list[str] = []
 
     def fit_transform(self, df: pd.DataFrame) -> np.ndarray:
         """Fit the scaler on the given DataFrame and transform it.
@@ -52,11 +54,12 @@ class Preprocessor:
                 usable feature columns, or fitting/transformation fails.
         """
         self._validate_dataframe(df)
-        feature_df = self._remove_non_feature_columns(df)
+        feature_df = self._prepare_feature_frame(df)
         self._validate_feature_columns(feature_df)
 
         try:
             scaled_values = self._scaler.fit_transform(feature_df.to_numpy())
+            self._feature_columns = list(feature_df.columns)
             self._is_fitted = True
 
             logger.info(
@@ -95,7 +98,7 @@ class Preprocessor:
                 "Scaler must be fitted or loaded before calling transform."
             )
 
-        feature_df = self._remove_non_feature_columns(df)
+        feature_df = self._prepare_feature_frame(df)
         self._validate_feature_columns(feature_df)
 
         try:
@@ -128,10 +131,16 @@ class Preprocessor:
             PreprocessingError: If the labels are invalid or encoding
                 fails.
         """
+        return self.fit_labels(labels)
+
+    def fit_labels(self, labels: Any) -> np.ndarray:
+        """Fit the label encoder and return encoded labels."""
         self._validate_labels(labels)
 
         try:
-            encoded = self._label_encoder.fit_transform(labels)
+            normalized_labels = self._normalize_labels(labels)
+            encoded = self._label_encoder.fit_transform(normalized_labels)
+            self._labels_fitted = True
 
             logger.info("Encoded %d labels.", len(encoded))
 
@@ -141,6 +150,27 @@ class Preprocessor:
             logger.exception("Failed to encode labels.")
             raise PreprocessingError(
                 "Failed to encode the provided labels."
+            ) from exc
+
+    def transform_labels(self, labels: Any) -> np.ndarray:
+        """Transform labels using the fitted label encoder."""
+        self._validate_labels(labels)
+
+        if not self._labels_fitted:
+            logger.error("Label transform called before encoder was fitted.")
+            raise PreprocessingError(
+                "Label encoder must be fitted or loaded before calling transform_labels."
+            )
+
+        try:
+            normalized_labels = self._normalize_labels(labels)
+            transformed = self._label_encoder.transform(normalized_labels)
+            logger.info("Transformed %d labels.", len(transformed))
+            return transformed
+        except Exception as exc:
+            logger.exception("Failed to transform labels.")
+            raise PreprocessingError(
+                "Failed to transform the provided labels."
             ) from exc
 
     def decode_labels(self, labels: Any) -> np.ndarray:
@@ -192,13 +222,16 @@ class Preprocessor:
 
             joblib.dump(self._scaler, constants.SCALER_PATH)
             joblib.dump(self._label_encoder, constants.LABEL_ENCODER_PATH)
+            joblib.dump(self._feature_columns, constants.FEATURE_COLUMNS_PATH)
 
             logger.info(
-                "Persisted %s to %s and %s to %s.",
+                "Persisted %s to %s, %s to %s, and %s to %s.",
                 constants.SCALER_NAME,
                 constants.SCALER_PATH,
                 constants.LABEL_ENCODER_NAME,
                 constants.LABEL_ENCODER_PATH,
+                constants.FEATURE_COLUMNS_NAME,
+                constants.FEATURE_COLUMNS_PATH,
             )
 
         except Exception as exc:
@@ -231,14 +264,23 @@ class Preprocessor:
         try:
             self._scaler = joblib.load(constants.SCALER_PATH)
             self._label_encoder = joblib.load(constants.LABEL_ENCODER_PATH)
+            self._labels_fitted = True
+            if constants.FEATURE_COLUMNS_PATH.exists():
+                self._feature_columns = list(joblib.load(constants.FEATURE_COLUMNS_PATH))
+            elif hasattr(self._scaler, "feature_names_in_"):
+                self._feature_columns = list(self._scaler.feature_names_in_)
+            else:
+                self._feature_columns = []
             self._is_fitted = True
 
             logger.info(
-                "Loaded %s from %s and %s from %s.",
+                "Loaded %s from %s, %s from %s, and %s from %s.",
                 constants.SCALER_NAME,
                 constants.SCALER_PATH,
                 constants.LABEL_ENCODER_NAME,
                 constants.LABEL_ENCODER_PATH,
+                constants.FEATURE_COLUMNS_NAME,
+                constants.FEATURE_COLUMNS_PATH,
             )
 
         except Exception as exc:
@@ -306,21 +348,59 @@ class Preprocessor:
             logger.error("Labels must not be empty.")
             raise PreprocessingError("Labels must not be empty.")
 
-    def _remove_non_feature_columns(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Remove configured non-feature columns from the DataFrame.
+    @property
+    def feature_columns(self) -> list[str]:
+        """Return the fitted feature column order."""
+        return list(self._feature_columns)
 
-        Args:
-            df: The input DataFrame potentially containing non-feature
-                columns such as identifiers or raw URL strings.
+    def _normalize_labels(self, labels: Any) -> list[str]:
+        """Normalize labels into the canonical strings used by the model."""
+        normalized_labels: list[str] = []
 
-        Returns:
-            A DataFrame containing only numerical feature columns.
-        """
+        for label in labels:
+            if pd.isna(label):
+                raise PreprocessingError("Labels must not contain missing values.")
+
+            normalized = str(label).strip().lower()
+            if normalized in {"legitimate", "benign", "0"}:
+                normalized_labels.append("legitimate")
+            elif normalized in {"phishing", "1"}:
+                normalized_labels.append("phishing")
+            else:
+                raise PreprocessingError(f"Unsupported label value: {label!r}")
+
+        return normalized_labels
+
+    def _prepare_feature_frame(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Drop non-feature columns, coerce numerics, and align schema."""
         columns_to_drop = [
             column
             for column in constants.NON_FEATURE_COLUMNS
             if column in df.columns
         ]
-        feature_df = df.drop(columns=columns_to_drop, errors="ignore")
-        feature_df = feature_df.astype(float)
-        return feature_df
+        feature_df = df.drop(columns=columns_to_drop, errors="ignore").copy()
+
+        if self._feature_columns:
+            missing_columns = [
+                column
+                for column in self._feature_columns
+                if column not in feature_df.columns
+            ]
+            if missing_columns:
+                logger.warning(
+                    "Missing feature columns will be filled with zeros: %s",
+                    missing_columns,
+                )
+            feature_df = feature_df.reindex(
+                columns=self._feature_columns,
+                fill_value=0,
+            )
+
+        try:
+            feature_df = feature_df.apply(pd.to_numeric, errors="raise")
+            return feature_df.astype(float)
+        except Exception as exc:
+            logger.exception("Feature frame contains non-numeric values.")
+            raise PreprocessingError(
+                "Feature columns must be numeric or boolean values."
+            ) from exc

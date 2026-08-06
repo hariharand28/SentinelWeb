@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-
+from app.services.gemini_service import generate_explanation
 from app.api.schemas import (
     PredictionRequest,
     PredictionResponse,
@@ -12,6 +12,7 @@ from app.exceptions.ml_exceptions import (
 from app.ml.predictor import Predictor
 
 logger = get_logger(__name__)
+predictor = Predictor()
 
 router = APIRouter(tags=["Prediction"])
 
@@ -32,8 +33,13 @@ def predict(request: PredictionRequest) -> PredictionResponse:
             500 - Model loading failure or unexpected server error.
     """
     try:
-        predictor = Predictor()
         result = predictor.predict(str(request.url))
+        explanation = generate_explanation(
+            url=str(request.url),
+            prediction=result["prediction"],
+            confidence=result["confidence"],
+            features={}
+        )
 
         logger.info(
             "Prediction completed for URL: %s",
@@ -43,6 +49,7 @@ def predict(request: PredictionRequest) -> PredictionResponse:
         return PredictionResponse(
             prediction=str(result["prediction"]),
             confidence=float(result["confidence"]),
+            explanation=explanation,
         )
 
     except PredictionError as exc:
