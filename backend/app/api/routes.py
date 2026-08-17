@@ -34,22 +34,10 @@ def predict(request: PredictionRequest) -> PredictionResponse:
     """
     try:
         result = predictor.predict(str(request.url))
-        explanation = generate_explanation(
-            url=str(request.url),
-            prediction=result["prediction"],
-            confidence=result["confidence"],
-            features={}
-        )
 
         logger.info(
             "Prediction completed for URL: %s",
             request.url,
-        )
-
-        return PredictionResponse(
-            prediction=str(result["prediction"]),
-            confidence=float(result["confidence"]),
-            explanation=explanation,
         )
 
     except PredictionError as exc:
@@ -79,3 +67,27 @@ def predict(request: PredictionRequest) -> PredictionResponse:
             status_code=500,
             detail="Internal server error.",
         ) from exc
+
+    try:
+        explanation = generate_explanation(
+            url=str(request.url),
+            prediction=result["prediction"],
+            confidence=result["confidence"],
+            features=result.get("features", {}),
+        )
+    except Exception:
+        logger.exception(
+            "Gemini explanation generation failed for URL: %s",
+            request.url,
+        )
+        explanation = (
+    "The website was successfully analyzed by the SentinelWeb "
+    "Random Forest model. An AI-generated explanation is "
+    "temporarily unavailable. Please try again later."
+        )
+
+    return PredictionResponse(
+        prediction=str(result["prediction"]),
+        confidence=float(result["confidence"]),
+        explanation=explanation,
+    )

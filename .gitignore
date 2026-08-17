@@ -1,25 +1,24 @@
 # Python
-venv/
 __pycache__/
 *.pyc
+*.pyo
 
 # Environment
 .env
+.venv/
 
+# Logs
+backend/logs/
 
-models/
+# Archives
+*.zip
+
+# Models (keep if not tracking trained models)
+# backend/models/
 
 # VS Code
 .vscode/
 
-# ML
-*.pkl
-*.joblib
-
-# Logs
-*.log
-
 # OS
 .DS_Store
 Thumbs.db
-

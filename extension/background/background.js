@@ -45,9 +45,19 @@ async function fetchPrediction(url) {
 
   const data = await response.json();
 
-  if (!data || typeof data.prediction !== "string" || typeof data.confidence !== "number") {
+if (
+    !data ||
+    typeof data.prediction !== "string" ||
+    typeof data.confidence !== "number"
+) {
     throw new Error("Backend returned an unexpected response shape.");
-  }
+}
+
+// Always provide an explanation field.
+if (typeof data.explanation !== "string") {
+    data.explanation = "No explanation available.";
+}
+
 
   return data;
 }
@@ -71,12 +81,13 @@ async function getPredictionForActiveTab() {
 
   const result = await fetchPrediction(url);
 
-  return {
+return {
     ok: true,
     url,
     prediction: result.prediction,
-    confidence: result.confidence
-  };
+    confidence: result.confidence,
+    explanation: result.explanation
+};
 }
 
 // Listen for messages from the popup (or content script) asking for a

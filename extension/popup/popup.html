@@ -5,14 +5,17 @@
   <title>SentinelWeb</title>
   <link rel="stylesheet" href="popup.css" />
 </head>
+
 <body>
   <main class="container">
+
     <header class="header">
       <div class="logo">🛡️</div>
       <h1>SentinelWeb</h1>
     </header>
 
     <section class="card" id="statusCard">
+
       <div class="field">
         <span class="label">Website URL</span>
         <span class="value" id="urlValue">Loading...</span>
@@ -28,12 +31,22 @@
         <span class="value" id="confidenceValue">—</span>
       </div>
 
+      <div class="field">
+        <div class="label">Explanation</div>
+        <div id="explanationValue" class="explanation">
+          Loading explanation...
+        </div>
+      </div>
+
       <div class="error" id="errorMessage" hidden></div>
+
     </section>
 
     <button id="refreshBtn" class="refresh-btn">
-      <span id="refreshIcon">↻</span> Refresh
+      <span id="refreshIcon">↻</span>
+      Refresh
     </button>
+
   </main>
 
   <script src="popup.js"></script>

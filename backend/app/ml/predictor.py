@@ -115,6 +115,8 @@ class Predictor:
         return {
             "prediction": decoded_label,
             "confidence": confidence,
+            "features": features,
+
         }
 
     def _validate_url(self, url: str) -> None:

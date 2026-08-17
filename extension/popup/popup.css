@@ -148,3 +148,36 @@ body {
     transform: rotate(360deg);
   }
 }
+.explanation {
+  margin-top: 4px;
+  padding: 10px;
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+
+  font-size: 12.5px;
+  line-height: 1.5;
+  font-weight: 400;
+  color: #374151;
+
+  display: block;
+  width: 100%;
+  min-height: 45px;
+  max-height: 150px;
+
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.explanation::-webkit-scrollbar {
+  width: 5px;
+}
+
+.explanation::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}

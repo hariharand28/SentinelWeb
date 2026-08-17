@@ -1,7 +1,7 @@
 // popup/popup.js
 // Handles the popup UI: asks background.js for a prediction on the
 // current tab and renders the result (or an error).
-
+const explanationValueEl = document.getElementById("explanationValue");
 const urlValueEl = document.getElementById("urlValue");
 const predictionValueEl = document.getElementById("predictionValue");
 const confidenceValueEl = document.getElementById("confidenceValue");
@@ -14,6 +14,7 @@ function setLoadingState() {
   predictionValueEl.textContent = "—";
   predictionValueEl.className = "value badge pending";
   confidenceValueEl.textContent = "—";
+  explanationValueEl.textContent = "Loading explanation...";
   hideError();
   refreshBtn.disabled = true;
   refreshIcon.classList.add("spinning");
@@ -41,6 +42,7 @@ function renderResult(result) {
     predictionValueEl.textContent = "—";
     predictionValueEl.className = "value badge pending";
     confidenceValueEl.textContent = "—";
+    explanationValueEl.textContent = "No explanation available.";
     showError(result.error || "Something went wrong.");
     return;
   }
@@ -52,6 +54,9 @@ function renderResult(result) {
 
   predictionValueEl.textContent = prediction;
   confidenceValueEl.textContent = confidencePercent;
+
+  explanationValueEl.textContent =
+  result.explanation || "No explanation available.";  
 
   predictionValueEl.className = "value badge";
   if (prediction === "legitimate") {
@@ -76,6 +81,7 @@ function requestPrediction() {
       predictionValueEl.textContent = "—";
       predictionValueEl.className = "value badge pending";
       confidenceValueEl.textContent = "—";
+      explanationValueEl.textContent = "No explanation available.";
       showError(chrome.runtime.lastError.message);
       return;
     }
