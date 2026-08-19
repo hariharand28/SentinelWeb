@@ -22,3 +22,5 @@ backend/logs/
 # OS
 .DS_Store
 Thumbs.db
+# Trained ML model artifacts
+backend/models/*.pkl
