@@ -19,6 +19,27 @@ After the machine-learning model produces the final classification, **Google Gem
 
 ---
 
+# SentinelWeb Setup Guide
+
+## 1. Prerequisites
+
+Before running SentinelWeb, install:
+
+- Python 3.x
+- Google Chrome
+- Git
+- A Gemini API key
+
+---
+
+## 2. Clone the Repository
+
+Open PowerShell / Command Prompt:
+
+```powershell
+git clone https://github.com/hariharand28/SentinelWeb.git
+cd SentinelWeb
+
 # 1. Project Overview
 
 Phishing attacks commonly use deceptive URLs to trick users into visiting malicious websites and revealing sensitive information.
