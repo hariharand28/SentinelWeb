@@ -1,147 +1,122 @@
-# SentinelWeb
+# 🛡️ SentinelWeb
 
 ## AI-Powered Phishing URL Detection Chrome Extension
 
-SentinelWeb is a machine-learning-based cybersecurity system that detects potentially malicious and phishing URLs through a Chrome browser extension.
+SentinelWeb is a machine-learning-based cybersecurity system that detects potentially phishing and malicious URLs through a Chrome browser extension.
 
-The system analyzes the URL of the currently active website, extracts security-related URL and domain features, processes those features using the same preprocessing pipeline used during model training, and uses a **Random Forest Classifier** to determine whether the URL is:
+The system analyzes the URL of the currently active website, extracts multiple lexical, domain, URL, and security-related features, preprocesses them using the same schema used during model training, and uses a **Random Forest Classifier** to classify the URL as:
 
-- **Legitimate**
-- **Phishing**
+- ✅ Legitimate
+- 🚨 Phishing
 
-After the machine-learning model produces the final classification, **Google Gemini is used only to generate a human-readable explanation** of the result.
+After the machine-learning model produces the final prediction, **Google Gemini** is used only to generate a human-readable explanation of the result.
 
-> **Important Architecture Principle**
+> **Core Architecture Principle**
 >
-> Random Forest makes the final security classification.
+> **Random Forest = Final Prediction**
 >
-> Gemini does not make or change the classification. It is used only to explain the machine-learning result.
+> **Gemini = Explanation Only**
+>
+> Gemini does not replace, override, or modify the machine-learning classification.
 
 ---
 
-# SentinelWeb Setup Guide
+# 📌 1. Project Overview
 
-## 1. Prerequisites
+Phishing attacks are one of the most common forms of cyberattack. Attackers create deceptive URLs and websites that imitate legitimate services in order to trick users into revealing sensitive information such as passwords, payment information, and account credentials.
 
-Before running SentinelWeb, install:
+Many phishing URLs contain suspicious structural characteristics such as:
 
-- Python 3.x
-- Google Chrome
-- Git
-- A Gemini API key
+- unusually long URLs
+- excessive subdomains
+- IP addresses instead of domain names
+- suspicious login or verification paths
+- encoded characters
+- excessive special characters
+- suspicious query parameters
+- punycode domains
+- URL-shortening services
+- unusual domain patterns
 
----
+SentinelWeb uses these characteristics as machine-learning features and applies a trained Random Forest model to identify suspicious URLs.
 
-## 2. Clone the Repository
-
-Open PowerShell / Command Prompt:
-
-```powershell
-git clone https://github.com/hariharand28/SentinelWeb.git
-cd SentinelWeb
-
-# 1. Project Overview
-
-Phishing attacks commonly use deceptive URLs to trick users into visiting malicious websites and revealing sensitive information.
-
-Traditional users may find it difficult to identify suspicious URLs because phishing websites can use:
-
-- deceptive subdomains
-- long and complex URLs
-- suspicious paths
-- IP addresses instead of domains
-- URL encoding
-- misleading login or verification paths
-- suspicious domain structures
-- unusual characters and patterns
-
-SentinelWeb attempts to automate this first-level URL analysis by examining multiple characteristics of a website address and using a trained machine-learning model to classify it.
-
-The system is designed as a practical cybersecurity tool that combines:
-
-1. Browser extension technology
-2. Machine learning
-3. Backend API architecture
-4. URL feature engineering
-5. Generative AI explanations
+The result is exposed through a FastAPI backend and displayed through a Chrome browser extension.
 
 ---
 
-# 2. Objectives
+# 🎯 2. Project Objectives
 
-The main objectives of SentinelWeb are:
+The primary objectives of SentinelWeb are:
 
-- Detect potentially phishing URLs using machine learning.
-- Analyze URLs directly from a Chrome browser.
-- Extract meaningful lexical, domain, and security-related URL features.
-- Maintain consistency between training-time and inference-time preprocessing.
-- Provide a confidence score for the prediction.
-- Provide a human-readable explanation of the prediction.
-- Separate machine-learning classification from generative AI explanation.
-- Provide a simple and practical user interface through a browser extension.
+1. Detect potentially phishing URLs using machine learning.
+2. Analyze URLs directly from the user's Chrome browser.
+3. Extract meaningful URL and domain security features.
+4. Maintain consistent preprocessing between training and inference.
+5. Provide a prediction confidence score.
+6. Generate a human-readable explanation using Gemini.
+7. Separate deterministic machine-learning prediction from generative AI explanation.
+8. Provide a simple browser-based cybersecurity interface.
+9. Demonstrate the integration of machine learning, backend APIs, browser extensions, and generative AI in a practical cybersecurity application.
 
 ---
 
-# 3. System Architecture
+# 🧠 3. Core Concept
 
-The overall SentinelWeb architecture is:
+SentinelWeb follows this architecture:
 
 ```text
-                    ┌──────────────────────────┐
-                    │      Chrome Browser      │
-                    │                          │
-                    │   SentinelWeb Extension  │
-                    └────────────┬─────────────┘
-                                 │
-                                 │ Active Tab URL
-                                 ▼
-                    ┌──────────────────────────┐
-                    │      FastAPI Backend     │
-                    │                          │
-                    │      POST /predict       │
-                    └────────────┬─────────────┘
-                                 │
-                                 ▼
-                    ┌──────────────────────────┐
-                    │     Feature Extraction   │
-                    │                          │
-                    │ Lexical Features         │
-                    │ Domain Features          │
-                    │ Security Features        │
-                    │ URL Features             │
-                    └────────────┬─────────────┘
-                                 │
-                                 ▼
-                    ┌──────────────────────────┐
-                    │      Preprocessing       │
-                    │                          │
-                    │ Feature Alignment        │
-                    │ Numeric Conversion       │
-                    │ Standard Scaling         │
-                    └────────────┬─────────────┘
-                                 │
-                                 ▼
-                    ┌──────────────────────────┐
-                    │   Random Forest Model    │
-                    │                          │
-                    │ Final Prediction         │
-                    │ Confidence Score         │
-                    └────────────┬─────────────┘
-                                 │
-                                 ▼
-                    ┌──────────────────────────┐
-                    │      Gemini API          │
-                    │                          │
-                    │ Explanation Generation   │
-                    │       ONLY               │
-                    └────────────┬─────────────┘
-                                 │
-                                 ▼
-                    ┌──────────────────────────┐
-                    │      Chrome Extension   │
-                    │                          │
-                    │ URL                      │
-                    │ Prediction               │
-                    │ Confidence               │
-                    │ Explanation               │
-                    └──────────────────────────┘
+              ┌───────────────────────────┐
+              │      Google Chrome        │
+              │                           │
+              │  SentinelWeb Extension   │
+              └─────────────┬─────────────┘
+                            │
+                            │ Current URL
+                            ▼
+              ┌───────────────────────────┐
+              │       FastAPI Backend     │
+              │                           │
+              │       POST /predict       │
+              └─────────────┬─────────────┘
+                            │
+                            ▼
+              ┌───────────────────────────┐
+              │     Feature Extraction    │
+              │                           │
+              │  Lexical / Domain / URL  │
+              │       / Security          │
+              └─────────────┬─────────────┘
+                            │
+                            ▼
+              ┌───────────────────────────┐
+              │       Preprocessing       │
+              │                           │
+              │ Feature Alignment         │
+              │ Numeric Conversion        │
+              │ Scaling                   │
+              └─────────────┬─────────────┘
+                            │
+                            ▼
+              ┌───────────────────────────┐
+              │    Random Forest Model    │
+              │                           │
+              │ Final Classification      │
+              │ Confidence Score          │
+              └─────────────┬─────────────┘
+                            │
+                            ▼
+              ┌───────────────────────────┐
+              │       Gemini API          │
+              │                           │
+              │ Explanation Generation    │
+              │        ONLY               │
+              └─────────────┬─────────────┘
+                            │
+                            ▼
+              ┌───────────────────────────┐
+              │      Chrome Extension     │
+              │                           │
+              │ Prediction                │
+              │ Confidence                │
+              │ Explanation               │
+              └───────────────────────────┘
