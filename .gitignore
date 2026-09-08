@@ -1,34 +1,33 @@
-# Python
+# ============================================================
+# SentinelWeb — .gitignore
+# ============================================================
+
+# Python bytecode
 __pycache__/
 *.pyc
 *.pyo
 
-# Environment
+# Environment files — NEVER commit secrets
 .env
+.env.local
+
+# Virtual environments
 .venv/
+venv/
+backend/venv/
 
 # Logs
 backend/logs/
 
-# Archives
+# Trained ML model artifacts (too large for git; see README for instructions)
+backend/models/*.pkl
+
+# Archive files (working backups — not needed in version control)
 *.zip
 
-# Models (keep if not tracking trained models)
-# backend/models/
-
-# VS Code
+# VS Code workspace settings
 .vscode/
 
-# OS
+# OS metadata
 .DS_Store
 Thumbs.db
-# Trained ML model artifacts
-backend/models/*.pkl
-
-.env
-.venv/
-backend/venv/
-backend/logs/
-backend/models/*.pkl
-__pycache__/
-*.pyc

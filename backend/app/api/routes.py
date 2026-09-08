@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from app.services.gemini_service import generate_explanation
 from app.api.schemas import (
     PredictionRequest,
@@ -9,29 +9,35 @@ from app.exceptions.ml_exceptions import (
     ModelPersistenceError,
     PredictionError,
 )
-from app.ml.predictor import Predictor
 
 logger = get_logger(__name__)
-predictor = Predictor()
 
 router = APIRouter(tags=["Prediction"])
 
 
 @router.post("/predict", response_model=PredictionResponse)
-def predict(request: PredictionRequest) -> PredictionResponse:
+def predict(request: PredictionRequest, http_request: Request) -> PredictionResponse:
     """Predict whether the submitted URL is phishing or legitimate.
 
+    The Predictor instance is loaded once at application startup and
+    accessed here via ``http_request.app.state.predictor``, ensuring
+    the heavy 200 MB model file is not reloaded per-request.
+
     Args:
-        request: Incoming prediction request.
+        request: Incoming prediction request containing the URL.
+        http_request: The raw FastAPI request used to access app state.
 
     Returns:
-        PredictionResponse containing the predicted label and confidence.
+        PredictionResponse containing the predicted label, confidence,
+        and a Gemini-generated explanation.
 
     Raises:
         HTTPException:
             400 - Invalid URL or prediction failure.
             500 - Model loading failure or unexpected server error.
     """
+    predictor = http_request.app.state.predictor
+
     try:
         result = predictor.predict(str(request.url))
 
@@ -81,9 +87,9 @@ def predict(request: PredictionRequest) -> PredictionResponse:
             request.url,
         )
         explanation = (
-    "The website was successfully analyzed by the SentinelWeb "
-    "Random Forest model. An AI-generated explanation is "
-    "temporarily unavailable. Please try again later."
+            "The website was successfully analyzed by the SentinelWeb "
+            "Random Forest model. An AI-generated explanation is "
+            "temporarily unavailable. Please try again later."
         )
 
     return PredictionResponse(

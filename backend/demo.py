@@ -1,14 +1,35 @@
+"""Interactive command-line demonstration for SentinelWeb.
+
+Allows testing the Random Forest predictor and optional Gemini explanation
+layer directly from the terminal without starting the web server.
+"""
+
 from app.ml.predictor import Predictor
+from app.services.gemini_service import generate_explanation
 
-def main():
-    predictor = Predictor()
 
-    print("=" * 50)
-    print("SentinelWeb - Phishing URL Detector")
-    print("=" * 50)
+def main() -> None:
+    print("=" * 55)
+    print("  SentinelWeb — Phishing URL Detection CLI Demo")
+    print("=" * 55)
+    print("Loading machine learning model artifacts...")
+
+    try:
+        predictor = Predictor()
+        print("[+] Model and preprocessor loaded successfully.")
+    except Exception as exc:
+        print(f"[-] Failed to load model artifacts: {exc}")
+        return
 
     while True:
-        url = input("\nEnter Website URL (or 'exit'): ")
+        try:
+            url = input("\nEnter Website URL (or 'exit'): ").strip()
+        except (KeyboardInterrupt, EOFError):
+            print("\nGoodbye!")
+            break
+
+        if not url:
+            continue
 
         if url.lower() == "exit":
             print("Goodbye!")
@@ -16,16 +37,30 @@ def main():
 
         try:
             result = predictor.predict(url)
+            confidence_pct = result["confidence"] * 100
 
-            print("\n========== RESULT ==========")
-            print("Prediction :", result["prediction"])
-            print("Confidence :", result["confidence"])
-            print("Risk Level :", result.get("risk", "Unknown"))
-            print("Reason     :", result.get("reason", "No explanation"))
-            print("============================")
+            # Attempt Gemini explanation if configured, fallback gracefully if not
+            explanation = "Gemini explanation not generated."
+            try:
+                explanation = generate_explanation(
+                    url=url,
+                    prediction=result["prediction"],
+                    confidence=result["confidence"],
+                    features=result.get("features", {}),
+                )
+            except Exception as gemini_err:
+                explanation = f"(Explanation unavailable: {gemini_err})"
 
-        except Exception as e:
-            print("Error:", e)
+            print("\n==================== RESULT ====================")
+            print(f" Analyzed URL : {url}")
+            print(f" Prediction   : {result['prediction'].upper()}")
+            print(f" Confidence   : {confidence_pct:.1f}%")
+            print(f" AI Context   : {explanation}")
+            print("================================================")
+
+        except Exception as exc:
+            print(f"Error during analysis: {exc}")
+
 
 if __name__ == "__main__":
     main()

@@ -10,15 +10,24 @@
 <body>
   <main class="app">
 
-    <header class="topbar">
-      <div class="brand">
-        <span class="brand-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 3l7 3v5c0 4.6-3 8.6-7 10-4-1.4-7-5.4-7-10V6l7-3z"/>
-          </svg>
-        </span>
-        <span class="brand-name">SentinelWeb</span>
-      </div>
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-icon" aria-hidden="true">
+      <img
+        src="../assets/icon.png"
+        alt=""
+        class="brand-logo"
+      />
+    </span>
+
+    <span class="brand-name">SentinelWeb</span>
+  </div>
+
+  <div class="live-tag" title="Extension active">
+    <span class="live-dot" aria-hidden="true"></span>
+    Active
+  </div>
+</header>
       <div class="live-tag" title="Extension active">
         <span class="live-dot" aria-hidden="true"></span>
         Active
@@ -63,6 +72,10 @@
       <div class="confidence-row">
         <span class="field-label">Confidence</span>
         <span class="value confidence-figure" id="confidenceValue">—</span>
+      </div>
+
+      <div class="confidence-bar-track" aria-hidden="true">
+        <div class="confidence-bar-fill" id="confidenceBar"></div>
       </div>
 
       <div class="divider" role="presentation"></div>

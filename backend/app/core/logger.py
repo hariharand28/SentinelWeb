@@ -88,7 +88,14 @@ class _LoggerManager:
 
             root_logger = logging.getLogger()
 
-            root_logger.setLevel(logging.DEBUG)
+            # Set root to WARNING to suppress noisy library logs
+            # (httpx, urllib3, tldextract, etc.).
+            root_logger.setLevel(logging.WARNING)
+
+            # SentinelWeb's own loggers remain at DEBUG level so
+            # internal application logs are fully captured.
+            app_logger = logging.getLogger("app")
+            app_logger.setLevel(logging.DEBUG)
 
             if root_logger.handlers:
                 root_logger.handlers.clear()
@@ -116,7 +123,7 @@ class _LoggerManager:
                 filename=LOGS_DIR / "sentinelweb.log",
                 when="midnight",
                 interval=1,
-                backupCount=30,
+                backupCount=7,
                 encoding="utf-8",
             )
 

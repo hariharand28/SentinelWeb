@@ -1,15 +1,21 @@
 {
-   
   "manifest_version": 3,
   "name": "SentinelWeb - Phishing Detector",
   "version": "1.0.0",
-  "description": "Detects whether the current website is legitimate or a phishing site using an AI backend.",
+  "description": "Detects whether the current website is legitimate or a phishing site using a Random Forest ML model and Gemini AI explanations.",
+
+  "icons": {
+    "16":  "assets/icon.png",
+    "32":  "assets/icon.png",
+    "48":  "assets/icon.png",
+    "128": "assets/icon.png"
+  },
 
   "permissions": [
-  "activeTab",
-  "tabs",
-  "storage"
-],
+    "activeTab",
+    "tabs",
+    "storage"
+  ],
 
   "host_permissions": [
     "http://127.0.0.1:8000/*"
@@ -21,7 +27,13 @@
 
   "action": {
     "default_popup": "popup/popup.html",
-    "default_title": "SentinelWeb"
+    "default_title": "SentinelWeb",
+    "default_icon": {
+      "16":  "assets/icon.png",
+      "32":  "assets/icon.png",
+      "48":  "assets/icon.png",
+      "128": "assets/icon.png"
+    }
   },
 
   "content_scripts": [
@@ -31,6 +43,4 @@
       "run_at": "document_idle"
     }
   ]
-  
 }
-

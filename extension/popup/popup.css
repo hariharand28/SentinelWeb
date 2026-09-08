@@ -80,11 +80,21 @@ body {
 }
 
 .brand-icon {
+  width: 30px;
+  height: 30px;
   display: flex;
-  width: 20px;
-  height: 20px;
-  color: var(--brand);
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
+
+.brand-logo {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+  display: block;
+}
+
 .brand-icon svg { width: 100%; height: 100%; }
 
 .brand-name {
@@ -129,9 +139,18 @@ body {
   transition: border-color 0.25s ease;
 }
 
-#statusCard:has(#predictionValue.legitimate) { border-color: rgba(47, 212, 128, 0.45); }
-#statusCard:has(#predictionValue.phishing)   { border-color: rgba(255, 77, 109, 0.45); }
-#statusCard:has(#predictionValue.pending)    { border-color: rgba(255, 176, 32, 0.4); }
+#statusCard:has(#predictionValue.legitimate) {
+  border-color: rgba(47, 212, 128, 0.45);
+  box-shadow: 0 4px 20px -2px rgba(47, 212, 128, 0.12);
+}
+#statusCard:has(#predictionValue.phishing) {
+  border-color: rgba(255, 77, 109, 0.45);
+  box-shadow: 0 4px 20px -2px rgba(255, 77, 109, 0.16);
+}
+#statusCard:has(#predictionValue.pending) {
+  border-color: rgba(255, 176, 32, 0.4);
+  box-shadow: 0 4px 20px -2px rgba(255, 176, 32, 0.10);
+}
 
 /* ---------- URL row ---------- */
 
@@ -252,6 +271,41 @@ body {
 #statusCard:has(#predictionValue.legitimate) .confidence-figure { color: var(--safe); }
 #statusCard:has(#predictionValue.phishing) .confidence-figure   { color: var(--danger); }
 #statusCard:has(#predictionValue.pending) .confidence-figure    { color: var(--pending); }
+
+/* ---------- Confidence Progress Bar ---------- */
+
+.confidence-bar-track {
+  width: 100%;
+  height: 6px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: -4px;
+}
+
+.confidence-bar-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: var(--brand);
+  transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.3s ease;
+}
+
+#statusCard:has(#predictionValue.legitimate) .confidence-bar-fill {
+  background: var(--safe);
+  box-shadow: 0 0 8px rgba(47, 212, 128, 0.45);
+}
+
+#statusCard:has(#predictionValue.phishing) .confidence-bar-fill {
+  background: var(--danger);
+  box-shadow: 0 0 8px rgba(255, 77, 109, 0.45);
+}
+
+#statusCard:has(#predictionValue.pending) .confidence-bar-fill {
+  background: var(--pending);
+  box-shadow: 0 0 6px rgba(255, 176, 32, 0.35);
+}
 
 .divider {
   height: 1px;

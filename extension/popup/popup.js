@@ -1,19 +1,25 @@
 // popup/popup.js
 // Handles the popup UI: asks background.js for a prediction on the
 // current tab and renders the result (or an error).
+
 const explanationValueEl = document.getElementById("explanationValue");
 const urlValueEl = document.getElementById("urlValue");
 const predictionValueEl = document.getElementById("predictionValue");
 const confidenceValueEl = document.getElementById("confidenceValue");
+const confidenceBarEl = document.getElementById("confidenceBar");
 const errorMessageEl = document.getElementById("errorMessage");
 const refreshBtn = document.getElementById("refreshBtn");
 const refreshIcon = document.getElementById("refreshIcon");
 
 function setLoadingState() {
   urlValueEl.textContent = "Loading...";
+  urlValueEl.removeAttribute("title");
   predictionValueEl.textContent = "—";
   predictionValueEl.className = "value badge pending";
   confidenceValueEl.textContent = "—";
+  if (confidenceBarEl) {
+    confidenceBarEl.style.width = "0%";
+  }
   explanationValueEl.textContent = "Loading explanation...";
   hideError();
   refreshBtn.disabled = true;
@@ -36,12 +42,17 @@ function hideError() {
 }
 
 function renderResult(result) {
-  urlValueEl.textContent = result.url || "Unknown";
+  const currentUrl = result.url || "Unknown";
+  urlValueEl.textContent = currentUrl;
+  urlValueEl.title = currentUrl;
 
   if (!result.ok) {
     predictionValueEl.textContent = "—";
     predictionValueEl.className = "value badge pending";
     confidenceValueEl.textContent = "—";
+    if (confidenceBarEl) {
+      confidenceBarEl.style.width = "0%";
+    }
     explanationValueEl.textContent = "No explanation available.";
     showError(result.error || "Something went wrong.");
     return;
@@ -50,13 +61,19 @@ function renderResult(result) {
   hideError();
 
   const prediction = result.prediction; // "legitimate" | "phishing"
-  const confidencePercent = (result.confidence * 100).toFixed(1) + "%";
+  const confidenceVal = typeof result.confidence === "number" ? result.confidence : 0;
+  const confidencePercent = (confidenceVal * 100).toFixed(1) + "%";
 
   predictionValueEl.textContent = prediction;
   confidenceValueEl.textContent = confidencePercent;
 
+  if (confidenceBarEl) {
+    const barWidth = Math.min(100, Math.max(0, confidenceVal * 100));
+    confidenceBarEl.style.width = `${barWidth}%`;
+  }
+
   explanationValueEl.textContent =
-  result.explanation || "No explanation available.";  
+    result.explanation || "No explanation available.";
 
   predictionValueEl.className = "value badge";
   if (prediction === "legitimate") {
@@ -78,9 +95,13 @@ function requestPrediction() {
     // couldn't be reached at all.
     if (chrome.runtime.lastError) {
       urlValueEl.textContent = "Unknown";
+      urlValueEl.removeAttribute("title");
       predictionValueEl.textContent = "—";
       predictionValueEl.className = "value badge pending";
       confidenceValueEl.textContent = "—";
+      if (confidenceBarEl) {
+        confidenceBarEl.style.width = "0%";
+      }
       explanationValueEl.textContent = "No explanation available.";
       showError(chrome.runtime.lastError.message);
       return;
@@ -92,5 +113,10 @@ function requestPrediction() {
 
 refreshBtn.addEventListener("click", requestPrediction);
 
-// Fetch a prediction as soon as the popup opens.
-document.addEventListener("DOMContentLoaded", requestPrediction);
+// Fetch a prediction as soon as the popup opens, handling both
+// document-ready states reliably.
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", requestPrediction);
+} else {
+  requestPrediction();
+}

@@ -17,8 +17,10 @@ logger = get_logger(__name__)
 
 API_KEY = os.getenv("GEMINI_API_KEY")
 
-# Use the model configured in .env.
-# Your currently tested model is gemini-3.5-flash.
+# The model to use for explanation generation.
+# Must match a valid model ID in your Google AI Studio account.
+# See: https://ai.google.dev/gemini-api/docs/models
+# Example: "gemini-3.5-flash" or "models/gemini-3.5-flash"
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
 
 GEMINI_TIMEOUT_SECONDS = float(
@@ -254,9 +256,6 @@ def generate_explanation(
             config=types.GenerateContentConfig(
                 max_output_tokens=500,
                 safety_settings=_SAFETY_SETTINGS,
-                thinking_config=types.ThinkingConfig(
-                    thinking_level="minimal"
-                ),
             ),
         )
 
