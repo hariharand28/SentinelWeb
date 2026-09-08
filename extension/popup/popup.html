@@ -2,37 +2,79 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="color-scheme" content="dark" />
   <title>SentinelWeb</title>
   <link rel="stylesheet" href="popup.css" />
 </head>
 
 <body>
-  <main class="container">
+  <main class="app">
 
-    <header class="header">
-      <div class="logo">🛡️</div>
-      <h1>SentinelWeb</h1>
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3l7 3v5c0 4.6-3 8.6-7 10-4-1.4-7-5.4-7-10V6l7-3z"/>
+          </svg>
+        </span>
+        <span class="brand-name">SentinelWeb</span>
+      </div>
+      <div class="live-tag" title="Extension active">
+        <span class="live-dot" aria-hidden="true"></span>
+        Active
+      </div>
     </header>
 
     <section class="card" id="statusCard">
 
-      <div class="field">
-        <span class="label">Website URL</span>
-        <span class="value" id="urlValue">Loading...</span>
+      <div class="url-row">
+        <svg class="url-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="9"/>
+          <path d="M3 12h18M12 3c2.5 2.6 3.8 5.8 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.8-3.8-9s1.3-6.4 3.8-9z"/>
+        </svg>
+        <span class="value url-text" id="urlValue">Loading...</span>
       </div>
 
-      <div class="field">
-        <span class="label">Prediction</span>
-        <span class="value badge" id="predictionValue">—</span>
+      <div class="verdict-zone">
+        <span class="verdict-icon" aria-hidden="true">
+          <svg class="icon-default" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3l7 3v5c0 4.6-3 8.6-7 10-4-1.4-7-5.4-7-10V6l7-3z"/>
+          </svg>
+          <svg class="icon-safe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3l7 3v5c0 4.6-3 8.6-7 10-4-1.4-7-5.4-7-10V6l7-3z"/>
+            <path d="M9 12.2l1.8 1.8L15 9.6"/>
+          </svg>
+          <svg class="icon-danger" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3l9 16H3L12 3z"/>
+            <path d="M12 9.5v4"/>
+            <circle cx="12" cy="16.2" r="0.6" fill="currentColor" stroke="none"/>
+          </svg>
+          <svg class="icon-pending" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="8"/>
+            <path d="M12 12l4-2.4"/>
+          </svg>
+        </span>
+        <div class="verdict-copy">
+          <span class="field-label">Verdict</span>
+          <span class="value badge" id="predictionValue">—</span>
+        </div>
       </div>
 
-      <div class="field">
-        <span class="label">Confidence</span>
-        <span class="value" id="confidenceValue">—</span>
+      <div class="confidence-row">
+        <span class="field-label">Confidence</span>
+        <span class="value confidence-figure" id="confidenceValue">—</span>
       </div>
 
-      <div class="field">
-        <div class="label">Explanation</div>
+      <div class="divider" role="presentation"></div>
+
+      <div class="explanation-block">
+        <div class="explanation-heading">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 3l1.8 4.6L18 9l-4.2 1.4L12 15l-1.8-4.6L6 9l4.2-1.4L12 3z"/>
+            <path d="M19 15l.7 1.8 1.8.7-1.8.7L19 20l-.7-1.8-1.8-.7 1.8-.7L19 15z"/>
+          </svg>
+          AI analysis
+        </div>
         <div id="explanationValue" class="explanation">
           Loading explanation...
         </div>
@@ -42,10 +84,17 @@
 
     </section>
 
-    <button id="refreshBtn" class="refresh-btn">
-      <span id="refreshIcon">↻</span>
-      Refresh
+    <button id="refreshBtn" class="refresh-btn" type="button">
+      <span id="refreshIcon" class="refresh-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 11A8 8 0 1 0 18.6 15.5"/>
+          <path d="M20 5v6h-6"/>
+        </svg>
+      </span>
+      Rescan page
     </button>
+
+    <footer class="footer-note">ML verdict, AI-explained by Gemini</footer>
 
   </main>
 

@@ -24,3 +24,11 @@ backend/logs/
 Thumbs.db
 # Trained ML model artifacts
 backend/models/*.pkl
+
+.env
+.venv/
+backend/venv/
+backend/logs/
+backend/models/*.pkl
+__pycache__/
+*.pyc
