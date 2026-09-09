@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, Request
+
 from app.services.gemini_service import generate_explanation
 from app.api.schemas import (
     PredictionRequest,
@@ -17,24 +18,10 @@ router = APIRouter(tags=["Prediction"])
 
 @router.post("/predict", response_model=PredictionResponse)
 def predict(request: PredictionRequest, http_request: Request) -> PredictionResponse:
-    """Predict whether the submitted URL is phishing or legitimate.
+    """Run Random Forest prediction only.
 
-    The Predictor instance is loaded once at application startup and
-    accessed here via ``http_request.app.state.predictor``, ensuring
-    the heavy 200 MB model file is not reloaded per-request.
-
-    Args:
-        request: Incoming prediction request containing the URL.
-        http_request: The raw FastAPI request used to access app state.
-
-    Returns:
-        PredictionResponse containing the predicted label, confidence,
-        and a Gemini-generated explanation.
-
-    Raises:
-        HTTPException:
-            400 - Invalid URL or prediction failure.
-            500 - Model loading failure or unexpected server error.
+    Gemini is intentionally NOT called here so that the ML verdict
+    is returned immediately.
     """
     predictor = http_request.app.state.predictor
 
@@ -44,6 +31,12 @@ def predict(request: PredictionRequest, http_request: Request) -> PredictionResp
         logger.info(
             "Prediction completed for URL: %s",
             request.url,
+        )
+
+        return PredictionResponse(
+            prediction=str(result["prediction"]),
+            confidence=float(result["confidence"]),
+            explanation="",
         )
 
     except PredictionError as exc:
@@ -74,26 +67,44 @@ def predict(request: PredictionRequest, http_request: Request) -> PredictionResp
             detail="Internal server error.",
         ) from exc
 
+
+@router.post("/explain")
+def explain(request: PredictionRequest, http_request: Request) -> dict:
+    """Generate the Gemini explanation separately from the ML prediction."""
+
+    predictor = http_request.app.state.predictor
+
     try:
+        # Re-run the lightweight prediction pipeline so Gemini receives
+        # the same extracted features used by the Random Forest model.
+        result = predictor.predict(str(request.url))
+
         explanation = generate_explanation(
             url=str(request.url),
-            prediction=result["prediction"],
-            confidence=result["confidence"],
+            prediction=str(result["prediction"]),
+            confidence=float(result["confidence"]),
             features=result.get("features", {}),
         )
-    except Exception:
-        logger.exception(
-            "Gemini explanation generation failed for URL: %s",
+
+        logger.info(
+            "Explanation generated for URL: %s",
             request.url,
         )
-        explanation = (
-            "The website was successfully analyzed by the SentinelWeb "
-            "Random Forest model. An AI-generated explanation is "
-            "temporarily unavailable. Please try again later."
+
+        return {
+            "explanation": explanation,
+        }
+
+    except Exception as exc:
+        logger.exception(
+            "Explanation generation failed for URL: %s",
+            request.url,
         )
 
-    return PredictionResponse(
-        prediction=str(result["prediction"]),
-        confidence=float(result["confidence"]),
-        explanation=explanation,
-    )
+        return {
+            "explanation": (
+                "AI explanation is temporarily unavailable. "
+                "The phishing prediction was generated successfully "
+                "by the Random Forest model."
+            )
+        }

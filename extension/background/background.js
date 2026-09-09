@@ -1,16 +1,9 @@
-// background/background.js
-// MV3 service worker
-// Responsible for:
-//   1. Getting the URL of the currently active tab.
-//   2. Sending that URL to the SentinelWeb backend for a phishing prediction.
-//   3. Returning the result back to whoever asked (popup.js).
+// SentinelWeb background service worker
 
-const API_ENDPOINT = "http://127.0.0.1:8000/predict";
+const API_BASE = "http://20.219.53.10:8000";
+const PREDICT_ENDPOINT = `${API_BASE}/predict`;
+const EXPLAIN_ENDPOINT = `${API_BASE}/explain`;
 
-/**
- * Gets the URL of the currently active tab in the current window.
- * @returns {Promise<string>} the active tab's URL
- */
 async function getActiveTabUrl() {
   const [tab] = await chrome.tabs.query({
     active: true,
@@ -24,14 +17,25 @@ async function getActiveTabUrl() {
   return tab.url;
 }
 
-/**
- * Calls the SentinelWeb backend with the given URL and returns the
- * prediction result.
- * @param {string} url
- * @returns {Promise<{prediction: string, confidence: number}>}
- */
+
+// Safely send explanation to popup.
+// Popup may already be closed when Gemini finishes.
+function sendExplanationMessage(explanation) {
+  chrome.runtime.sendMessage(
+    {
+      type: "EXPLANATION_READY",
+      explanation
+    },
+    () => {
+      // Ignore the harmless error when no popup is listening.
+      void chrome.runtime.lastError;
+    }
+  );
+}
+
+
 async function fetchPrediction(url) {
-  const response = await fetch(API_ENDPOINT, {
+  const response = await fetch(PREDICT_ENDPOINT, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
@@ -45,32 +49,53 @@ async function fetchPrediction(url) {
 
   const data = await response.json();
 
-if (
+  if (
     !data ||
     typeof data.prediction !== "string" ||
     typeof data.confidence !== "number"
-) {
-    throw new Error("Backend returned an unexpected response shape.");
-}
-
-// Always provide an explanation field.
-if (typeof data.explanation !== "string") {
-    data.explanation = "No explanation available.";
-}
-
+  ) {
+    throw new Error("Backend returned an unexpected prediction response.");
+  }
 
   return data;
 }
 
-/**
- * Full flow: get active tab URL -> ask backend -> return combined result.
- */
+
+async function fetchExplanation(url) {
+  try {
+    const response = await fetch(EXPLAIN_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ url })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Explanation endpoint returned ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    const explanation =
+      typeof data.explanation === "string"
+        ? data.explanation
+        : "No explanation available.";
+
+    sendExplanationMessage(explanation);
+
+  } catch (error) {
+    sendExplanationMessage(
+      "AI explanation is temporarily unavailable. " +
+      "The phishing prediction was generated successfully by the Random Forest model."
+    );
+  }
+}
+
+
 async function getPredictionForActiveTab() {
   const url = await getActiveTabUrl();
 
-  // Guard against internal browser pages (chrome://, edge://, about:, etc.)
-  // since the backend can't meaningfully classify these and requests to
-  // them are not useful.
   if (!/^https?:\/\//i.test(url)) {
     return {
       ok: false,
@@ -79,21 +104,30 @@ async function getPredictionForActiveTab() {
     };
   }
 
+  // Wait ONLY for Random Forest prediction.
   const result = await fetchPrediction(url);
 
-return {
+  const predictionResult = {
     ok: true,
     url,
     prediction: result.prediction,
     confidence: result.confidence,
-    explanation: result.explanation
-};
+    explanation: ""
+  };
+
+  // Start Gemini separately.
+  // DO NOT await this.
+  fetchExplanation(url);
+
+  // Return ML verdict immediately.
+  return predictionResult;
 }
 
-// Listen for messages from the popup (or content script) asking for a
-// prediction on the currently active tab.
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+
   if (message && message.type === "GET_PREDICTION") {
+
     getPredictionForActiveTab()
       .then((result) => sendResponse(result))
       .catch((err) => {
@@ -103,7 +137,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         });
       });
 
-    // Return true to indicate we will respond asynchronously.
     return true;
   }
 });
